@@ -1,0 +1,229 @@
+/*** Warby Parker ***/
+--Task 1. Select all columns from the first 10 rows.
+
+SELECT *
+FROM survey
+LIMIT 10;
+
+--Task 2. Create a quiz funnel using the GROUP BY command.
+
+SELECT question,
+    COUNT(DISTINCT user_id)
+FROM survey
+GROUP BY question;
+
+--Task 4. Examine the first five rows of each table
+
+SELECT *
+FROM quiz
+LIMIT 5;
+
+SELECT *
+FROM home_try_on
+LIMIT 5;
+
+SELECT *
+FROM purchase
+LIMIT 5;
+
+--Task 5. Use a LEFT JOIN to combine the three tables
+
+SELECT DISTINCT q.user_id,
+    h.user_id IS NOT NULL AS
+    'is_home_try_on',
+    h.number_of_pairs,
+    p.user_id IS NOT NULL AS 'is_purchase'
+FROM quiz AS 'q'
+LEFT JOIN home_try_on AS 'h'
+    ON q.user_id = h.user_id
+LEFT JOIN purchase AS 'p'
+    ON p.user_id = q.user_id
+LIMIT 10;
+ 
+ --Task 6. Overall conversion rates. Number of users in the quiz step of the funnel.
+ 
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+  	'is_home_try_on',
+  	h.number_of_pairs,
+ 	p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+        ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT COUNT(*) AS ‘num_quiz’
+FROM funnels;
+
+--Add another column that sums the is_home_try_on column in funnels.  Alias this column as 'num_home.' This is the number of users in the "Home Try-On" step of the funnel.
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+  	'is_home_try_on',
+ 	h.number_of_pairs,
+ 	p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+        ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+        ON p.user_id = q.user_id)
+SELECT COUNT(*) AS 'num_quiz', 
+    SUM(is_home_try_on) AS 'num_home'
+FROM funnels;
+
+--Add another column that sums the is_purchase column in funnels. Alias this column as ‘num_purchase.’ This is the number of users in the “purchase” step of the funnel.
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+  	'is_home_try_on',
+ 	h.number_of_pairs,
+  	p.user_id IS NOT NULL AS 'is_purchase'		
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+	ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT COUNT(*) AS 'num_quiz', 
+    SUM(is_home_try_on) AS 'num_home',
+    SUM(is_purchase) AS 'num_purchase'
+FROM funnels;
+
+--Percentage of users moving from quiz to purchase.
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+  	'is_home_try_on',
+ 	h.number_of_pairs,
+  	p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+        ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+        ON p.user_id = q.user_id)
+SELECT COUNT(*) AS 'num_quiz', 
+    SUM(is_home_try_on) AS 'num_home',
+    SUM(is_purchase) AS 'num_purchase',
+    1.0 * SUM(is_home_try_on) / COUNT(user_id) 	AS 'quiz_to_home',
+    1.0 * SUM(is_purchase) / SUM(is_home_try_on) AS 'home_to_purchase'
+FROM funnels;
+
+--Total number of purchases by customers who tried on 5 pairs
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+        'is_home_try_on',
+        h.number_of_pairs,
+        p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+	ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT COUNT(DISTINCT CASE
+    WHEN number_of_pairs = '5 pairs' THEN 
+    user_id
+    END) AS '5 pairs'
+FROM funnels
+WHERE is_purchase = 1;
+
+--Total number of purchases by customers who tried on 3 pairs
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+        'is_home_try_on',
+        h.number_of_pairs,
+        p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+	ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT COUNT(DISTINCT CASE
+    WHEN number_of_pairs = '3 pairs' THEN
+    user_id
+    END) AS '3 pairs'
+FROM funnels
+WHERE is_purchase = 1;
+
+--Total number of customers who tried on 3 pairs at home
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+        'is_home_try_on',
+        h.number_of_pairs,
+        p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+	ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT COUNT(DISTINCT CASE
+    WHEN number_of_pairs = '3 pairs' THEN    
+    user_id
+    END) AS 'home_try_on_3_pairs'
+FROM funnels
+WHERE is_home_try_on = 1;
+
+--Total number of customers who tried on 5 pairs at home
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+        'is_home_try_on',
+        h.number_of_pairs,
+        p.user_id IS NOT NULL 
+        AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+	ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT COUNT(DISTINCT CASE
+    WHEN number_of_pairs = '5 pairs' THEN   
+    user_id
+    END) AS 'home_try_on_5_pairs'
+FROM funnels
+WHERE is_home_try_on = 1;
+
+
+--Use a LEFT JOIN to combine the three tables and include model_name
+
+SELECT DISTINCT q.user_id,
+    h.user_id IS NOT NULL AS
+    'is_home_try_on',
+    h.number_of_pairs, 
+    p.model_name,
+    p.user_id IS NOT NULL AS 'is_purchase'
+FROM quiz AS 'q'
+LEFT JOIN home_try_on AS 'h'
+    ON q.user_id = h.user_id
+LEFT JOIN purchase AS 'p'
+    ON p.user_id = q.user_id
+LIMIT 10;
+ 
+--Total count of glasses purchased per model
+
+WITH funnels AS (
+    SELECT DISTINCT q.user_id,
+        h.user_id IS NOT NULL AS
+        'is_home_try_on',
+        h.number_of_pairs, 
+        p.model_name,
+        p.user_id IS NOT NULL AS 'is_purchase'
+    FROM quiz AS 'q'
+    LEFT JOIN home_try_on AS 'h'
+	ON q.user_id = h.user_id
+    LEFT JOIN purchase AS 'p'
+ 	ON p.user_id = q.user_id)
+SELECT model_name, 
+    COUNT(*) AS 'purchased'
+FROM funnels
+WHERE is_purchase = 1
+GROUP BY model_name;
